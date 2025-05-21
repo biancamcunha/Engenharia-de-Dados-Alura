@@ -1,6 +1,10 @@
+from math import ceil
 import os
 import requests
 import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class DadosRepositorios:
 
@@ -11,10 +15,18 @@ class DadosRepositorios:
         self.headers = {'Authorization': 'Bearer ' + self.access_token,
                         'X-GitHub-Api-Version': '2022-11-28'}
         
+    def __busca_num_pags(self):
+        url = f"https://api.github.com/users/{self.owner}"
+        response = requests.get(url, headers=self.headers).json()
+        n_pags = ceil(response['public_repos'] / 30)
+        return n_pags 
+        
     def lista_repositorios(self):
         repos_list = []
 
-        for page_num in range(1, 20):
+        n_pags = self.__busca_num_pags()
+
+        for page_num in range(1, n_pags + 1):
             try:
                 url = f"{self.api_base_url}/users/{self.owner}/repos?per_page=100&page={page_num}"
                 response = requests.get(url, headers=self.headers)
@@ -42,3 +54,14 @@ class DadosRepositorios:
             except:
                 pass
         return repos_languages
+    
+    def cria_df_linguagens(self):
+        repositorios = self.lista_repositorios()
+        nomes = self.nomes_repos(repositorios)
+        linguagens = self.nomes_linguagens(repositorios)
+
+        dados = pd.DataFrame()
+        dados['repository_name'] = nomes
+        dados['language'] = linguagens
+
+        return dados
